@@ -158,27 +158,37 @@ class FootnotePreprocessor(markdown.preprocessors.Preprocessor):
 
     def _handleFootnoteDefinitions(self, lines):
         """
-        Recursively find all footnote definitions in lines.
+        Finds all footnote definitions in lines, stores
+        them internally and returns the text with footnote
+        defs stripped.
 
         Keywords:
 
         * lines: A list of lines of text
         
         Return: A list of lines with footnote definitions removed.
+
+        Side effect: footnote definitions saved in self.footnotes
         
         """
-        i, id, footnote = self._findFootnoteDefinition(lines)
+        footnote_line_no, footnote_id, footnote_text = \
+            self._findFootnoteDefinition(lines)
 
-        if id :
-            plain = lines[:i]
-            detabbed, theRest = self.detectTabbed(lines[i+1:])
-            self.footnotes.setFootnote(id,
-                                       footnote + "\n"
-                                       + "\n".join(detabbed))
-            more_plain = self._handleFootnoteDefinitions(theRest)
-            return plain + [""] + more_plain
-        else :
+        if not footnote_id:
             return lines
+
+        reply = []
+        while footnote_id:
+            reply.extend(lines[0:footnote_line_no])
+            reply.append("")   # separator instead of footnote-def
+            detabbed, lines = self.detectTabbed(lines[footnote_line_no+1:])
+            self.footnotes.setFootnote(
+                footnote_id,
+                footnote_text + "\n" + "\n".join(detabbed))
+            footnote_line_no, footnote_id, footnote_text = \
+                self._findFootnoteDefinition(lines)
+
+        return reply
 
     def _findFootnoteDefinition(self, lines):
         """
